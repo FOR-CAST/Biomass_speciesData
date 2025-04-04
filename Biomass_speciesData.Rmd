@@ -58,19 +58,19 @@ dir.create("figures", showWarnings = FALSE)
 if (!file.exists("figures/markdownBadge.png")) {
   download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
                 destfile = "figures/markdownBadge.png",
-                mode = 'wb')
+                mode = "wb")
 }
 if (!file.exists("figures/issuesBadge.png")) {
   download.file(url = "https://img.shields.io/badge/Get%20help-Report%20issues-%3CCOLOR%3E.png",
                 destfile = "figures/issuesBadge.png",
-                mode = 'wb')
+                mode = "wb")
 }
 
 modversion <- paste(unlist(moduleMetadata(module = 'Biomass_speciesData', path = '..')$version), collapse = ".")
 download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesData-", paste0("v.%20", modversion),
                            "-%3CCOLOR%3E.png"),
               destfile = "figures/moduleVersionBadge.png",
-              mode = 'wb')
+              mode = "wb")
 ```
 
 ``` {r moduleBadge-Biomass-speciesData, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
