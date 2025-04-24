@@ -71,20 +71,20 @@ defineModule(sim, list(
                                  "(NFI) datasets. Set to 0L if necessary to bypass checking the SSL certificate (this",
                                  "may be necessary when NFI's website SSL certificate is not correctly configured).")),
     defineParameter(".studyAreaName", "character", NA, NA, NA,
-                    "Human-readable name for the study area used. If NA, a hash of `studyAreaLarge` will be used."),
+                    "Human-readable name for the study area used. If NA, a hash of `studyArea_biomassParam` will be used."),
     defineParameter(".useCache", "character", "init", NA, NA,
                     desc = "Controls cache; caches the init event by default"),
     defineParameter(".useParallel", "numeric", parallel::detectCores(), NA, NA,
                     desc = "Used in reading csv file with fread. Will be passed to `data.table::setDTthreads`.")
   ),
   inputObjects = bindrows(
-    expectsInput("rasterToMatchLarge", "SpatRaster",
-                 desc = paste("a raster of `studyAreaLarge` in the same resolution and projection the simulation's.",
+    expectsInput("rasterToMatch_biomassParam", "SpatRaster",
+                 desc = paste("a raster of `studyArea_biomassParam` in the same resolution and projection the simulation's.",
                               "Defaults to the using the Canadian Forestry Service, National Forest Inventory,",
                               "kNN-derived stand biomass map."),
                  sourceURL = ""),
     # expectsInput("rawBiomassMap", "SpatRaster",
-    #              desc = paste("total biomass raster layer in study area. Only used to create `rasterToMatchLarge`",
+    #              desc = paste("total biomass raster layer in study area. Only used to create `rasterToMatch_biomassParam`",
     #                           "if necessary. Defaults to the Canadian Forestry Service, National Forest Inventory,",
     #                           "kNN-derived total aboveground biomass map from 2001 (in tonnes/ha), unless",
     #                           "'dataYear' != 2001. See ",
@@ -104,16 +104,18 @@ defineModule(sim, list(
                               "`P(sim)$sppEquivCol` column in `sppEquiv`. If not provided, then species will be taken from",
                               "the entire `P(sim)$sppEquivCol` column in `sppEquiv`.",
                               "See `LandR::sppEquivalencies_CA`.")),
-    expectsInput("studyAreaLarge", "sf",
+    expectsInput("studyArea", "SpatVector",
+                 desc = paste("Polygon to use as the study area")),
+    expectsInput("studyArea_biomassParam", "SpatVector",
                  desc =  paste("Polygon to use as the parametrisation study area. Must be provided by the user.",
-                               "Note that `studyAreaLarge` is only used for parameter estimation, and",
+                               "Note that `studyArea_biomassParam` is only used for parameter estimation, and",
                                "can be larger than the actual study area used for LandR simulations (e.g,",
                                "larger than `studyArea` in LandR Biomass_core)."),
                  sourceURL = NA),
     expectsInput("studyAreaReporting", "sf",
-                 desc = paste("multipolygon (typically smaller/unbuffered than `studyAreaLarge` and `studyArea`",
+                 desc = paste("multipolygon (typically smaller/unbuffered than `studyArea_biomassParam` and `studyArea`",
                               "in LandR Biomass_core) to use for plotting/reporting.",
-                              "If not provided, will default to `studyAreaLarge`."),
+                              "If not provided, will default to `studyArea_biomassParam`."),
                  sourceURL = NA)
   ),
   outputObjects = bindrows(
@@ -190,9 +192,9 @@ biomassDataInit <- function(sim) {
       speciesLayersNew <- fn(
         destinationPath = dPath, # this is generic files (preProcess)
         outputPath = outputPath(sim), # this will be the studyArea-specific files (postProcess)
-        studyArea = sim$studyAreaLarge,
+        studyArea = sim$studyArea_biomassParam,
         studyAreaName = P(sim)$.studyAreaName,
-        rasterToMatch = sim$rasterToMatchLarge,
+        rasterToMatch = sim$rasterToMatch_biomassParam,
         sppEquiv = sim$sppEquiv,
         sppEquivCol = P(sim)$sppEquivCol,
         thresh = P(sim)$coverThresh,
@@ -225,11 +227,11 @@ biomassDataInit <- function(sim) {
                           character(1))
 
   ## re-enforce study area mask (merged/summed layers are losing the mask)
-  sim$speciesLayers <- maskTo(sim$speciesLayers, sim$rasterToMatchLarge)
+  sim$speciesLayers <- maskTo(sim$speciesLayers, sim$rasterToMatch_biomassParam)
 
   ## make sure empty pixels inside study area have 0 cover, instead of NAs.
   ## this can happen when data has NAs instead of 0s and is not merged/overlayed (e.g. CASFRI)
-  tempRas <- sim$rasterToMatchLarge
+  tempRas <- sim$rasterToMatch_biomassParam
   tempRas[!is.na(tempRas[])] <- 0
   sim$speciesLayers <- raster::cover(sim$speciesLayers, tempRas)
   names(sim$speciesLayers) <- species
@@ -296,34 +298,40 @@ biomassDataInit <- function(sim) {
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
-  if (!suppliedElsewhere("studyAreaLarge", sim)) {
-    stop("Please provide a 'studyAreaLarge' polygon.
-         If parameterisation is to be done on the same area as 'studyArea'
-         provide the same polygon to 'studyAreaLarge'")
-    # message("'studyAreaLarge' was not provided by user. Using the same as 'studyArea'")
-    # sim <- objectSynonyms(sim, list(c("studyAreaLarge", "studyArea"))) # Jan 2021 we agreed to force user to provide a SA/SAL
+  ## Study area(s) ------------------------------------------------
+  if (!suppliedElsewhere("studyArea", sim)) {
+    sim$studyArea <- randomStudyArea(seed = 1234, size = (250^2)*100)  # Jan 2021 we agreed to force user to provide a SA/SAL
+  }
+  
+  if (!suppliedElsewhere("studyArea_biomassParam", sim)) {
+    if (!is.null(sim$studyAreaLarge)) {
+      sim$studyArea_biomassParam <- sim$studyArea
+    } else {
+      warning("please replace studyAreaLarge with studyArea_biomassParam")
+      sim$studyArea_biomassParam <- sim$studyAreaLarge
+    }
   }
 
   if (is.na(P(sim)$.studyAreaName)) {
-    params(sim)[[currentModule(sim)]][[".studyAreaName"]] <- reproducible::studyAreaName(sim$studyAreaLarge)
-    message("The .studyAreaName is not supplied; derived name from sim$studyAreaLarge: ",
+    params(sim)[[currentModule(sim)]][[".studyAreaName"]] <- reproducible::studyAreaName(sim$studyArea_biomassParam)
+    message("The .studyAreaName is not supplied; derived name from sim$studyArea_biomassParam: ",
             params(sim)[[currentModule(sim)]][[".studyAreaName"]])
   }
 
   if (!suppliedElsewhere("studyAreaReporting", sim)) {
-    message("'studyAreaReporting' was not provided by user. Using the same as 'studyAreaLarge'.")
-    sim$studyAreaReporting <- sim$studyAreaLarge
+    message("'studyAreaReporting' was not provided by user. Using the same as 'studyArea_biomassParam'.")
+    sim$studyAreaReporting <- sim$studyArea_biomassParam
   }
 
   needRTML <- FALSE
-  if (is.null(sim$rasterToMatchLarge)) {
-    if (!suppliedElsewhere("rasterToMatchLarge", sim)) {      ## if one is not provided, re do both (safer?)
+  if (is.null(sim$rasterToMatch_biomassParam)) {
+    if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) {      ## if one is not provided, re do both (safer?)
       needRTML <- TRUE
-      message("There is no rasterToMatchLarge supplied; will attempt to use rawBiomassMap, if it is there; otherwise will try KNN")
+      message("There is no rasterToMatch_biomassParam supplied; will attempt to use rawBiomassMap, if it is there; otherwise will try KNN")
     } else {
-      stop("rasterToMatchLarge is going to be supplied, but ", currentModule(sim), " requires it ",
+      stop("rasterToMatch_biomassParam is going to be supplied, but ", currentModule(sim), " requires it ",
            "as part of its .inputObjects. Please make it accessible to ", currentModule(sim),
-           " in the .inputObjects by passing it in as an object in simInit(objects = list(rasterToMatchLarge = aRaster)",
+           " in the .inputObjects by passing it in as an object in simInit(objects = list(rasterToMatch_biomassParam = aRaster)",
            " or in a module that gets loaded prior to ", currentModule(sim))
     }
   }
@@ -350,41 +358,41 @@ biomassDataInit <- function(sim) {
         rawBiomassMap <- prepRawBiomassMap(url = biomassURL,
                                            studyAreaName = P(sim)$.studyAreaName,
                                            cacheTags = cacheTags,
-                                           cropTo = sim$studyAreaLarge,
-                                           maskTo = sim$studyAreaLarge,
+                                           cropTo = sim$studyArea_biomassParam,
+                                           maskTo = sim$studyArea_biomassParam,
                                            projectTo = NA,  ## don't project to SA
                                            destinationPath = dPath)
     })
   } else {
     rawBiomassMap <- sim$rawBiomassMap
-    if (!.compareCRS(sim$rawBiomassMap, sim$studyAreaLarge)) {
+    if (!.compareCRS(sim$rawBiomassMap, sim$studyArea_biomassParam)) {
       ## note that extents may never align if the resolution and projection do not allow for it
       rawBiomassMap <- Cache(postProcess,
                              rawBiomassMap,
                              method = "bilinear",
-                             cropTo = sim$studyAreaLarge,
-                             maskTo = sim$studyAreaLarge,
+                             cropTo = sim$studyArea_biomassParam,
+                             maskTo = sim$studyArea_biomassParam,
                              projectTo = NA,  ## don't project to SA
                                overwrite = TRUE)
       }
     }
 
-  RTMs <- prepRasterToMatch(studyArea = sim$studyAreaLarge,
-                            studyAreaLarge = sim$studyAreaLarge,
+  RTMs <- prepRasterToMatch(studyArea = sim$studyArea_biomassParam,
+                            studyArea_biomassParam = sim$studyArea_biomassParam,
                             rasterToMatch = NULL,
-                            rasterToMatchLarge = if (needRTML) NULL else sim$rasterToMatchLarge,
+                            rasterToMatch_biomassParam = if (needRTML) NULL else sim$rasterToMatch_biomassParam,
                             destinationPath = dPath,
                             templateRas = rawBiomassMap,
                             studyAreaName = P(sim)$.studyAreaName,
                             cacheTags = cacheTags)
-  sim$rasterToMatchLarge <- RTMs$rasterToMatchLarge
+  sim$rasterToMatch_biomassParam <- RTMs$rasterToMatch_biomassParam
   rm(RTMs)
   }
 
-  if (st_crs(sim$studyAreaLarge) != st_crs(sim$rasterToMatchLarge)) {
-    warning(paste0("studyAreaLarge and rasterToMatchLarge projections differ.\n",
-                   "studyAreaLarge will be projected to match rasterToMatchLarge"))
-    sim$studyAreaLarge <- projectTo(sim$studyAreaLarge, sim$rasterToMatchLarge)
+  if (st_crs(sim$studyArea_biomassParam) != st_crs(sim$rasterToMatch_biomassParam)) {
+    warning(paste0("studyArea_biomassParam and rasterToMatch_biomassParam projections differ.\n",
+                   "studyArea_biomassParam will be projected to match rasterToMatch_biomassParam"))
+    sim$studyArea_biomassParam <- projectTo(sim$studyArea_biomassParam, sim$rasterToMatch_biomassParam)
   }
 
   ## Species equivalencies table and associated columns ----------------------------
@@ -397,7 +405,7 @@ biomassDataInit <- function(sim) {
   paramCheckOtherMods(sim, "vegLeadingProportion", ifSetButDifferent = "error")
 
   sppOuts <- sppHarmonize(sim$sppEquiv, sim$sppNameVector, P(sim)$sppEquivCol,
-                          sim$sppColorVect, P(sim)$vegLeadingProportion, sim$studyAreaLarge,
+                          sim$sppColorVect, P(sim)$vegLeadingProportion, sim$studyArea_biomassParam,
                           dPath = dPath)
   ## the following may, or may not change inputs
   sim$sppEquiv <- sppOuts$sppEquiv
