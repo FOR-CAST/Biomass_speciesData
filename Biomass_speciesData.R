@@ -323,72 +323,26 @@ biomassDataInit <- function(sim) {
     sim$studyAreaReporting <- sim$studyArea_biomassParam
   }
 
-  needRTML <- FALSE
-  if (is.null(sim$rasterToMatch_biomassParam)) {
-    if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) {      ## if one is not provided, re do both (safer?)
-      needRTML <- TRUE
-      message("There is no rasterToMatch_biomassParam supplied; will attempt to use rawBiomassMap, if it is there; otherwise will try KNN")
+  if (!suppliedElsewhere("rasterToMatch", sim)) {
+    if (terra::is.lonlat(sim$studyArea)) {
+      targetRes <- c(0.00333, 0.00333)
     } else {
-      stop("rasterToMatch_biomassParam is going to be supplied, but ", currentModule(sim), " requires it ",
-           "as part of its .inputObjects. Please make it accessible to ", currentModule(sim),
-           " in the .inputObjects by passing it in as an object in simInit(objects = list(rasterToMatch_biomassParam = aRaster)",
-           " or in a module that gets loaded prior to ", currentModule(sim))
+      targetRes <- c(250, 250)
+    }
+    sim$rasterToMatch <- rast(sim$studyArea, 
+                              res = targetRes, vals = 1) |>
+      mask(mask = sim$studyArea)
+  }
+  
+  if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) { 
+    if (!is.null(sim$rasterToMatchLarge)) {
+      warning("please use rasterToMatch_biomassParam in place of rasterToMatchLarge")
+      sim$rasterToMatch_biomassParam <- sim$rasterToMatchLarge
+    } else {
+      sim$rasterToMatch_biomassParam <- sim$rasterToMatch
     }
   }
-
-  if (needRTML) {
-    ## if rawBiomassMap exists, it needs to match SALarge, if it doesn't make it
-    if (is.null(sim$rawBiomassMap)) {
-      if (P(sim)$dataYear == 2001) {
-        biomassURL <- paste0("http://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/",
-                             "canada-forests-attributes_attributs-forests-canada/",
-                             "2001-attributes_attributs-2001/",
-                             "NFI_MODIS250m_2001_kNN_Structure_Biomass_TotalLiveAboveGround_v1.tif")
-      } else {
-        if (P(sim)$dataYear == 2011) {
-          biomassURL <- paste0("http://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/",
-                               "canada-forests-attributes_attributs-forests-canada/2011-attributes_attributs-2011/",
-                               "NFI_MODIS250m_2011_kNN_Structure_Biomass_TotalLiveAboveGround_v1.tif")
-        } else {
-          stop("'P(sim)$dataYear' must be 2001 OR 2011")
-        }
-      }
-
-      httr::with_config(config = httr::config(ssl_verifypeer = P(sim)$.sslVerify), {
-        rawBiomassMap <- prepRawBiomassMap(url = biomassURL,
-                                           studyAreaName = P(sim)$.studyAreaName,
-                                           cacheTags = cacheTags,
-                                           cropTo = sim$studyArea_biomassParam,
-                                           maskTo = sim$studyArea_biomassParam,
-                                           projectTo = NA,  ## don't project to SA
-                                           destinationPath = dPath)
-    })
-  } else {
-    rawBiomassMap <- sim$rawBiomassMap
-    if (!.compareCRS(sim$rawBiomassMap, sim$studyArea_biomassParam)) {
-      ## note that extents may never align if the resolution and projection do not allow for it
-      rawBiomassMap <- Cache(postProcess,
-                             rawBiomassMap,
-                             method = "bilinear",
-                             cropTo = sim$studyArea_biomassParam,
-                             maskTo = sim$studyArea_biomassParam,
-                             projectTo = NA,  ## don't project to SA
-                               overwrite = TRUE)
-      }
-    }
-
-  RTMs <- prepRasterToMatch(studyArea = sim$studyArea_biomassParam,
-                            studyArea_biomassParam = sim$studyArea_biomassParam,
-                            rasterToMatch = NULL,
-                            rasterToMatch_biomassParam = if (needRTML) NULL else sim$rasterToMatch_biomassParam,
-                            destinationPath = dPath,
-                            templateRas = rawBiomassMap,
-                            studyAreaName = P(sim)$.studyAreaName,
-                            cacheTags = cacheTags)
-  sim$rasterToMatch_biomassParam <- RTMs$rasterToMatch_biomassParam
-  rm(RTMs)
-  }
-
+  
   if (st_crs(sim$studyArea_biomassParam) != st_crs(sim$rasterToMatch_biomassParam)) {
     warning(paste0("studyArea_biomassParam and rasterToMatch_biomassParam projections differ.\n",
                    "studyArea_biomassParam will be projected to match rasterToMatch_biomassParam"))
