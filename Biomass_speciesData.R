@@ -78,19 +78,14 @@ defineModule(sim, list(
                     desc = "Used in reading csv file with fread. Will be passed to `data.table::setDTthreads`.")
   ),
   inputObjects = bindrows(
+    expectsInput("rasterToMatch", "SpatRaster",
+                 desc = paste("conditionally used as template raster if studyArea_rasterToMatch_biomassParam",
+                              "and rasterTomatch_biomassParam are not supplied")),
     expectsInput("rasterToMatch_biomassParam", "SpatRaster",
                  desc = paste("a raster of `studyArea_biomassParam` in the same resolution and projection the simulation's.",
                               "Defaults to the using the Canadian Forestry Service, National Forest Inventory,",
                               "kNN-derived stand biomass map."),
                  sourceURL = ""),
-    # expectsInput("rawBiomassMap", "SpatRaster",
-    #              desc = paste("total biomass raster layer in study area. Only used to create `rasterToMatch_biomassParam`",
-    #                           "if necessary. Defaults to the Canadian Forestry Service, National Forest Inventory,",
-    #                           "kNN-derived total aboveground biomass map from 2001 (in tonnes/ha), unless",
-    #                           "'dataYear' != 2001. See ",
-    #                           "https://open.canada.ca/data/en/dataset/ec9e2659-1c29-4ddb-87a2-6aced147a990",
-    #                           "for metadata."),
-    #              sourceURL = ""), ## sourceURL varies by `dataYear`
     expectsInput("sppColorVect", "character",
                  desc = paste("A named vector of colors to use for plotting.",
                               "The names must be in `sim$sppEquiv[[sim$sppEquivCol]]`,",
@@ -302,9 +297,9 @@ biomassDataInit <- function(sim) {
   if (!suppliedElsewhere("studyArea", sim)) {
     sim$studyArea <- randomStudyArea(seed = 1234, size = (250^2)*100)  # Jan 2021 we agreed to force user to provide a SA/SAL
   }
-  
+
   if (!suppliedElsewhere("studyArea_biomassParam", sim)) {
-    if (!is.null(sim$studyAreaLarge)) {
+    if (is.null(sim$studyAreaLarge)) {
       sim$studyArea_biomassParam <- sim$studyArea
     } else {
       warning("please replace studyAreaLarge with studyArea_biomassParam")
@@ -324,25 +319,35 @@ biomassDataInit <- function(sim) {
   }
 
   if (!suppliedElsewhere("rasterToMatch", sim)) {
-    if (terra::is.lonlat(sim$studyArea)) {
-      targetRes <- c(0.00333, 0.00333)
-    } else {
-      targetRes <- c(250, 250)
+    studyArea <- sim$studyArea
+    if (!inherits(studyArea, "SpatVector")) {
+      studyArea <- vect(studyArea)
     }
-    sim$rasterToMatch <- rast(sim$studyArea, 
-                              res = targetRes, vals = 1) |>
-      mask(mask = sim$studyArea)
+    if (terra::is.lonlat(studyArea)) {
+      #use NTEMS projection - LandR requires projected rasters for dispersal
+      studyArea <- project(studyArea,
+                           paste0("+proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77",
+                                  " +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs"))
+    }
+    sim$rasterToMatch <- rast(studyArea, res = c(250, 250), vals = 1) |>
+      mask(mask = studyArea)
   }
-  
-  if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) { 
+
+  if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) {
     if (!is.null(sim$rasterToMatchLarge)) {
       warning("please use rasterToMatch_biomassParam in place of rasterToMatchLarge")
       sim$rasterToMatch_biomassParam <- sim$rasterToMatchLarge
+    } else if (!terra::compareGeom(sim$studyArea_biomassParam, sim$studyArea)) {
+      #SA_BP was supplied but not RTM_BP
+      sim$rasterToMatch_biomassParam <- rast(sim$studyArea_biomassParam,
+                                             res = res(sim$rasterToMatch),
+                                                       vals = 1) |>
+        postProcess(maskTo = sim$studyArea_biomassParam)
     } else {
       sim$rasterToMatch_biomassParam <- sim$rasterToMatch
     }
   }
-  
+
   if (st_crs(sim$studyArea_biomassParam) != st_crs(sim$rasterToMatch_biomassParam)) {
     warning(paste0("studyArea_biomassParam and rasterToMatch_biomassParam projections differ.\n",
                    "studyArea_biomassParam will be projected to match rasterToMatch_biomassParam"))
