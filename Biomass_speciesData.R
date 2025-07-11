@@ -337,7 +337,8 @@ biomassDataInit <- function(sim) {
     if (!is.null(sim$rasterToMatchLarge)) {
       warning("please use rasterToMatch_biomassParam in place of rasterToMatchLarge")
       sim$rasterToMatch_biomassParam <- sim$rasterToMatchLarge
-    } else if (!terra::compareGeom(sim$studyArea_biomassParam, sim$studyArea)) {
+    # } else if (!terra::compareGeom(sim$studyArea_biomassParam, sim$studyArea)) {
+    } else if (!.compareCRS(sim$studyArea_biomassParam, sim$studyArea)) {
       #SA_BP was supplied but not RTM_BP
       sim$rasterToMatch_biomassParam <- rast(sim$studyArea_biomassParam,
                                              res = res(sim$rasterToMatch),
