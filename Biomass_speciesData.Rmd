@@ -395,8 +395,8 @@ number of pixels with forest cover are calculated (`treed`and `numTreed`
 output objects; see [list of outputs](#bsppdata-outputs-list)).
 
 [^biomass_speciesdata-1]: Raw data layers downloaded by the module are saved in
-\`dataPath(sim)\`, which can be controlled via
-\`options(reproducible.destinationPath = ...)\`.
+`dataPath(sim)`, which can be controlled via
+`options(reproducible.destinationPath = ...)`.
 
 ## Usage example {#bsppdata-example}
 
@@ -494,9 +494,10 @@ the simulation) we are not iterating it and so both the start and end times are
 set to `1` here.
 
 ```{r module usage example2-Biomass-speciesData}
-opts <- options(reproducible.useCache = TRUE,
-                reproducible.destinationPath = paths$inputPath,
-                reproducible.useCache)
+opts <- options(
+  reproducible.destinationPath = paths$inputPath,
+  reproducible.useCache = TRUE
+)
 
 mySimOut <- simInitAndSpades(times = list(start = 1, end = 1),
                              modules = modules, 
@@ -513,7 +514,8 @@ randomly generated study area within Canada.
 ```{r fig-Biomass-speciesDataOutPlots, eval=TRUE, echo=FALSE, fig.align = 'center', out.width = ifelse(knitr::is_latex_output(), "100%", "70%"), fig.cap = "(ref:Biomass-speciesData) automatically generates a plot of species dominance and number of presences in the study area when `.plotInitialTime=1` is passed as an argument."}
 ## make sure all include_graphics have wd attached to figure path
 ## this is necessary to knit to pdf using child Rmds - see https://stackoverflow.com/questions/61065560/cant-compile-rmarkdown-pdf-with-image-in-child-rmd-latex-error-image-file
-knitr::include_graphics(normPath(c("figures/testRunFigure.png")))
+knitr::include_graphics(normPath("figures/testRunFigure.png"))
 ```
 
 ## References {#bsppdata-refs}
+
