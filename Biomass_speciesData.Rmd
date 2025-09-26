@@ -171,17 +171,21 @@ the lowest quality data with higher quality data when several data sources are
 used. It's primary output is a `RasterStack` of species (ref:percent) cover,
 with each layer corresponding to a species.
 
-Currently, the module can access the Canadian National Forest Inventory (NFI)
-forest attributes kNN dataset [the default; @BeaudoinEtAl2017], the Common
-Attribute Schema for Forest Resource Inventories dataset [CASFRI; @Cosco2011],
-the Ontario Forest Resource Inventory (ONFRI), a dataset specific to Alberta
-compiled by Paul Pickell, and other Alberta forest inventory datasets. However,
-**only the NFI kNN data are freely available** and access to the other datasets
+Currently, the module can access the following datasets:
+- Canadian National Forest Inventory (NFI) forest attributes kNN dataset [`KNN`; @BeaudoinEtAl2014, @BeaudoinEtAl2017];
+- Common Attribute Schema for Forest Resource Inventories [`CASFRI` (v4); @Cosco2011],
+- Spatialized Canadian National Forest Inventory [`SCANFI`; @Guindon2023, @Guindon2024];
+- National Terrestrial Ecosystem Monitoring System for Canada Annual Tree Species [`NTEMS`; @Hermosilla2024];
+- Manitoba Forest Resource Inventory (`MBFRI`);
+- Ontario Forest Resource Inventory (`ONFRI`);
+- historical dataset specific to Western Canada compiled by Paul Pickell and Nicholas Coops [@Pickell2016] as part of the LandWeb project;
+- "current conditions" dataset specific to Western Canada compiled from forest resource inventories as part of the LandWeb project (`ForestInventory`);
+
+However, **only the NFI kNN data are freely available** and access to the other datasets
 must be granted by module developers and data owners, and requires a Google
 account. Nevertheless, the module is flexible enough that any user can use it to
 process additional datasets, provided that an adequate R function is passed to
-the module (see `types` parameter details in the [list of
-parameters](#bsppdata-params-list))
+the module (see `types` parameter details in the [list of parameters](#bsppdata-params-list)).
 
 When multiple data sources are used, the module will replace lower quality data
 with higher quality data following the order specified in the `types` parameter.

@@ -23,7 +23,7 @@ defineModule(sim, list(
                   "sf", "terra", "XML",
                   "reproducible (>= 2.1.0)",
                   "SpaDES.core (>= 2.1.4)", "SpaDES.tools (>= 1.0.2)",
-                  "PredictiveEcology/LandR@development (>= 1.1.5.9025)",
+                  "PredictiveEcology/LandR@development (>= 1.1.5.9057)",
                   "PredictiveEcology/pemisc@development"),
   parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
@@ -38,19 +38,18 @@ defineModule(sim, list(
                                  "naming convention. If different species in, e.g., the kNN data have the same",
                                  "name in the chosen column, their data are merged into one species by summing",
                                  "their percent cover in each raster cell.")),
-    defineParameter("types", "character", "KNN", NA, NA,
-                    desc = paste("The possible data sources. These must correspond to a function named",
-                                 "`paste0('prepSpeciesLayers_', types)`. Defaults to 'KNN'",
-                                 "to get the Canadian Forestry Service, National Forest Inventory,",
-                                 "kNN-derived species cover maps from year 'dataYear', using the",
-                                 "`LandR::prepSpeciesLayers_KNN` function (see",
-                                 "https://open.canada.ca/data/en/dataset/ec9e2659-1c29-4ddb-87a2-6aced147a990",
-                                 "for details on these data).",
-                                 "Other currently available options are 'ONFRI', 'CASFRI', 'Pickell' and",
-                                 "'ForestInventory', which attempt to get proprietary data - the user must be granted",
-                                 "access first. A custom function can be used to retrieve any data, just as long as",
-                                 "it is accessible by the module (e.g., in the global environment) and is named as",
-                                 "`paste0('prepSpeciesLayers_', types)`.")),
+    defineParameter("types", "character", "SCANFI", NA, NA,
+                    desc = paste(
+                      "The possible data sources. These must correspond to a function named",
+                      "`paste0('prepSpeciesLayers_', types)`. Defaults to 'SCANFI'.",
+                      "Other currently available options are:",
+                      "'CASFRI', 'ForestInventory', 'KNN', 'MBFRI', 'NTEMS', 'ONFRI', 'Pickell'.",
+                      "All non-'KNN' datasets attempt to get proprietary data;",
+                      "the user must be granted access first.",
+                      "A custom function can be used to retrieve any data, just as long as it is",
+                      "accessible by the module (e.g., in the global environment) and is named as",
+                      "`paste0('prepSpeciesLayers_', types)`."
+                    )),
     defineParameter("vegLeadingProportion", "numeric", 0.8, 0, 1,
                     desc = "a number that defines whether a species is leading for a given pixel. Only used for plotting."),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
@@ -67,11 +66,14 @@ defineModule(sim, list(
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
                     "This describes the simulation time interval between save events"),
     defineParameter(".sslVerify", "integer", as.integer(unname(curl::curl_options("^ssl_verifypeer$"))), NA_integer_, NA_integer_,
-                    desc = paste("Passed to `httr::config(ssl_verifypeer = P(sim)$.sslVerify)` when downloading KNN",
-                                 "(NFI) datasets. Set to 0L if necessary to bypass checking the SSL certificate (this",
-                                 "may be necessary when NFI's website SSL certificate is not correctly configured).")),
+                    desc = paste(
+                      "Passed to `httr::config(ssl_verifypeer = P(sim)$.sslVerify)` when downloading KNN",
+                      "(NFI) datasets. Set to 0L if necessary to bypass checking the SSL certificate",
+                      "(this may be necessary when NFI's website SSL certificate is not correctly configured)."
+                    )),
     defineParameter(".studyAreaName", "character", NA, NA, NA,
-                    "Human-readable name for the study area used. If NA, a hash of `studyArea_biomassParam` will be used."),
+                    paste("Human-readable name for the study area used.",
+                          "If `NA`, a hash of `studyArea_biomassParam` will be used.")),
     defineParameter(".useCache", "character", "init", NA, NA,
                     desc = "Controls cache; caches the init event by default"),
     defineParameter(".useParallel", "numeric", parallel::detectCores(), NA, NA,
@@ -102,14 +104,15 @@ defineModule(sim, list(
     expectsInput("studyArea", "sf",
                  desc = paste("`sf` polygon or terra `SpatVector` to use as the study area - `nrow` must be one")),
     expectsInput("studyArea_biomassParam", "sf",
-                 desc =  paste("Polygon to use as the parametrisation study area. Must be provided by the user.",
-                               "Note that `studyArea_biomassParam` is only used for parameter estimation, and",
-                               "can be larger than the actual study area used for LandR simulations (e.g,",
-                               "larger than `studyArea` in LandR Biomass_core)."),
+                 desc =  paste(
+                   "Polygon to use as the parametrisation study area. Must be provided by the user.",
+                   "Note that `studyArea_biomassParam` is only used for parameter estimation, and",
+                   "can be larger than the actual study area used for LandR simulations",
+                   "(e.g., larger than `studyArea` in LandR `Biomass_core`)."),
                  sourceURL = NA),
     expectsInput("studyAreaReporting", "sf",
                  desc = paste("multipolygon (typically smaller/unbuffered than `studyArea_biomassParam` and `studyArea`",
-                              "in LandR Biomass_core) to use for plotting/reporting.",
+                              "in LandR `Biomass_core`) to use for plotting/reporting.",
                               "If not provided, will default to `studyArea_biomassParam`."),
                  sourceURL = NA)
   ),
@@ -162,18 +165,22 @@ biomassDataInit <- function(sim) {
   dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": biomassInit() using dataPath '", dPath, "'.")
 
-  if (!exists("speciesLayers", envir = envir(sim), inherits = FALSE))
+  if (!exists("speciesLayers", envir = envir(sim), inherits = FALSE)) {
     sim$speciesLayers <- list()
+  }
 
   for (type in P(sim)$types) {
     fnName <- paste0("prepSpeciesLayers_", type)
     whereIsFnName <- pryr::where(fnName)
 
     envirName <- attr(whereIsFnName, "name")
-    if (is.null(envirName))
+    if (is.null(envirName)) {
       envirName <- environmentName(whereIsFnName)
-    if (!is.character(envirName)) # this is from "box" package; slightly different
+    }
+    if (!is.character(envirName)) {
+      ## this is from "box" package; slightly different
       envirName <- environmentName(envirName)
+    }
 
     message("#############################################")
     message(type, " -- Loading using ", fnName, " located in ", envirName)
@@ -293,9 +300,11 @@ biomassDataInit <- function(sim) {
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
+  rtm_res <- 240 ## SCANFI is 30m resolution and would be aggregated to this
+
   ## Study area(s) ------------------------------------------------
   if (!suppliedElsewhere("studyArea", sim)) {
-    sim$studyArea <- randomStudyArea(seed = 1234, size = (250^2)*100)  # Jan 2021 we agreed to force user to provide a SA/SAL
+    sim$studyArea <- LandR::randomStudyArea(seed = 1234, size = (rtm_res^2)*100)
   }
 
   if (!suppliedElsewhere("studyArea_biomassParam", sim)) {
@@ -321,16 +330,18 @@ biomassDataInit <- function(sim) {
   if (!suppliedElsewhere("rasterToMatch", sim)) {
     studyArea <- sim$studyArea
     if (!inherits(studyArea, "SpatVector")) {
-      studyArea <- vect(studyArea)
+      studyArea <- terra::vect(studyArea)
     }
     if (terra::is.lonlat(studyArea)) {
-      #use NTEMS projection - LandR requires projected rasters for dispersal
-      studyArea <- project(studyArea,
-                           paste0("+proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77",
-                                  " +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs"))
+      ## use SCANFI projection - LandR requires projected rasters for dispersal
+      studyArea <- terra::project(
+        studyArea,
+        paste("+proj=lcc +lat_0=0 +lon_0=-95 +lat_1=49 +lat_2=77",
+              "+x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+      )
     }
-    sim$rasterToMatch <- rast(studyArea, res = c(250, 250), vals = 1) |>
-      mask(mask = studyArea)
+    sim$rasterToMatch <- terra::rast(studyArea, res = c(rtm_res, rtm_res), vals = 1) |>
+      terra::mask(mask = studyArea)
   }
 
   if (!suppliedElsewhere("rasterToMatch_biomassParam", sim)) {
@@ -338,21 +349,25 @@ biomassDataInit <- function(sim) {
       warning("please use rasterToMatch_biomassParam in place of rasterToMatchLarge")
       sim$rasterToMatch_biomassParam <- sim$rasterToMatchLarge
     # } else if (!terra::compareGeom(sim$studyArea_biomassParam, sim$studyArea)) {
-    } else if (!.compareCRS(sim$studyArea_biomassParam, sim$studyArea)) {
+    } else if (!LandR::.compareCRS(sim$studyArea_biomassParam, sim$studyArea)) {
       #SA_BP was supplied but not RTM_BP
-      sim$rasterToMatch_biomassParam <- rast(sim$studyArea_biomassParam,
-                                             res = res(sim$rasterToMatch),
-                                                       vals = 1) |>
-        postProcess(maskTo = sim$studyArea_biomassParam)
+      sim$rasterToMatch_biomassParam <- terra::rast(
+        sim$studyArea_biomassParam,
+        resolution = terra::res(sim$rasterToMatch),
+        vals = 1
+      ) |>
+        reproducible::postProcess(maskTo = sim$studyArea_biomassParam)
     } else {
       sim$rasterToMatch_biomassParam <- sim$rasterToMatch
     }
   }
 
   if (st_crs(sim$studyArea_biomassParam) != st_crs(sim$rasterToMatch_biomassParam)) {
-    warning(paste0("studyArea_biomassParam and rasterToMatch_biomassParam projections differ.\n",
-                   "studyArea_biomassParam will be projected to match rasterToMatch_biomassParam"))
-    sim$studyArea_biomassParam <- projectTo(sim$studyArea_biomassParam, sim$rasterToMatch_biomassParam)
+    warning(paste0(
+      "studyArea_biomassParam and rasterToMatch_biomassParam projections differ.\n",
+      "studyArea_biomassParam will be projected to match rasterToMatch_biomassParam"
+    ))
+    sim$studyArea_biomassParam <- reproducible::projectTo(sim$studyArea_biomassParam, sim$rasterToMatch_biomassParam)
   }
 
   ## Species equivalencies table and associated columns ----------------------------
@@ -364,9 +379,15 @@ biomassDataInit <- function(sim) {
   paramCheckOtherMods(sim, "sppEquivCol", ifSetButDifferent = "error")
   paramCheckOtherMods(sim, "vegLeadingProportion", ifSetButDifferent = "error")
 
-  sppOuts <- sppHarmonize(sim$sppEquiv, sim$sppNameVector, P(sim)$sppEquivCol,
-                          sim$sppColorVect, P(sim)$vegLeadingProportion, sim$studyArea_biomassParam,
-                          dPath = dPath)
+  sppOuts <- LandR::sppHarmonize(
+    sppEquiv = sim$sppEquiv,
+    sppNameVector = sim$sppNameVector,
+    sppEquivCol = P(sim)$sppEquivCol,
+    sppColorVect = sim$sppColorVect,
+    vegLeadingProportion = P(sim)$vegLeadingProportion,
+    studyArea = sim$studyArea_biomassParam,
+    dPath = dPath
+  )
   ## the following may, or may not change inputs
   sim$sppEquiv <- sppOuts$sppEquiv
   sim$sppNameVector <- sppOuts$sppNameVector
@@ -375,4 +396,3 @@ biomassDataInit <- function(sim) {
 
   return(invisible(sim))
 }
-
