@@ -30,12 +30,12 @@ defineModule(sim, list(
     defineParameter("coverThresh", "integer", 10L, NA, NA,
                     desc = paste("The minimum % cover a species needs to have (per pixel) in the study",
                                  "area to be considered present")),
-    defineParameter("dataYear", "numeric", 2001, NA, NA,
+    defineParameter("dataYear", "numeric", 2020, NA, NA,
                     paste("Passed to `paste0('prepSpeciesLayers_', types)` function to fetch data",
-                          "from that year (if applicable). Defaults to 2001 as the default kNN year.")),
+                          "from that year (if applicable). Defaults to 2020 as the default SCANFI year.")),
     defineParameter("sppEquivCol", "character", "LandR", NA, NA,
                     desc = paste("The column in `sim$sppEquiv` data.table to group species by and use as a",
-                                 "naming convention. If different species in, e.g., the kNN data have the same",
+                                 "naming convention. If different species in, e.g., the SCANFI data have the same",
                                  "name in the chosen column, their data are merged into one species by summing",
                                  "their percent cover in each raster cell.")),
     defineParameter("types", "character", "SCANFI", NA, NA,
@@ -44,8 +44,7 @@ defineModule(sim, list(
                       "`paste0('prepSpeciesLayers_', types)`. Defaults to 'SCANFI'.",
                       "Other currently available options are:",
                       "'CASFRI', 'ForestInventory', 'KNN', 'MBFRI', 'NTEMS', 'ONFRI', 'Pickell'.",
-                      "All non-'KNN' datasets attempt to get proprietary data;",
-                      "the user must be granted access first.",
+                      "All non-KNN datasets attempt to get proprietary data; the user must be granted access first.",
                       "A custom function can be used to retrieve any data, just as long as it is",
                       "accessible by the module (e.g., in the global environment) and is named as",
                       "`paste0('prepSpeciesLayers_', types)`."
@@ -67,8 +66,8 @@ defineModule(sim, list(
                     "This describes the simulation time interval between save events"),
     defineParameter(".sslVerify", "integer", as.integer(unname(curl::curl_options("^ssl_verifypeer$"))), NA_integer_, NA_integer_,
                     desc = paste(
-                      "Passed to `httr::config(ssl_verifypeer = P(sim)$.sslVerify)` when downloading KNN",
-                      "(NFI) datasets. Set to 0L if necessary to bypass checking the SSL certificate",
+                      "Passed to `httr::config(ssl_verifypeer = P(sim)$.sslVerify)` when downloading NFI datasets.",
+                      "Set to 0L if necessary to bypass checking the SSL certificate",
                       "(this may be necessary when NFI's website SSL certificate is not correctly configured)."
                     )),
     defineParameter(".studyAreaName", "character", NA, NA, NA,
@@ -84,10 +83,10 @@ defineModule(sim, list(
                  desc = paste("conditionally used as template raster if studyArea_rasterToMatch_biomassParam",
                               "and rasterTomatch_biomassParam are not supplied")),
     expectsInput("rasterToMatch_biomassParam", "SpatRaster",
-                 desc = paste("a raster of `studyArea_biomassParam` in the same resolution and projection the simulation's.",
-                              "Defaults to the using the Canadian Forestry Service, National Forest Inventory,",
-                              "kNN-derived stand biomass map."),
-                 sourceURL = ""),
+                 desc = paste(
+                   "a raster of `studyArea_biomassParam` in the same resolution and projection as",
+                   "the simulation's."
+                 )),
     expectsInput("sppColorVect", "character",
                  desc = paste("A named vector of colors to use for plotting.",
                               "The names must be in `sim$sppEquiv[[sim$sppEquivCol]]`,",
@@ -350,7 +349,7 @@ biomassDataInit <- function(sim) {
       sim$rasterToMatch_biomassParam <- sim$rasterToMatchLarge
     # } else if (!terra::compareGeom(sim$studyArea_biomassParam, sim$studyArea)) {
     } else if (!LandR::.compareCRS(sim$studyArea_biomassParam, sim$studyArea)) {
-      #SA_BP was supplied but not RTM_BP
+      ## SA_BP was supplied but not RTM_BP
       sim$rasterToMatch_biomassParam <- terra::rast(
         sim$studyArea_biomassParam,
         resolution = terra::res(sim$rasterToMatch),
