@@ -51,7 +51,7 @@ defineModule(sim, list(
                     )),
     defineParameter("vegLeadingProportion", "numeric", 0.8, 0, 1,
                     desc = "a number that defines whether a species is leading for a given pixel. Only used for plotting."),
-    defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
+    defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
                     desc = "This describes the simulation time at which the first plot event should occur"),
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     desc = "This describes the simulation time interval between plot events"),
@@ -134,22 +134,15 @@ doEvent.Biomass_speciesData <- function(sim, eventTime, eventType) {
     },
     initPlot = {
       ## TODO: use Plots() here to allow saving of the maps to png etc.
-      if (anyPlotting(P(sim)$.plots) && any(P(sim)$.plots == "screen")) {
-        newDev <- if (!is.null(dev.list())) {
-          devCur <- dev.cur()
-          max(dev.list()) + 1
-        } else {
-          1
-        }
-        dev.set(newDev)
-
-        plotVTM(speciesStack = mask(sim$speciesLayers, sim$studyAreaReporting),
-                vegLeadingProportion = P(sim)$vegLeadingProportion,
-                sppEquiv = sim$sppEquiv,
-                sppEquivCol = P(sim)$sppEquivCol,
-                colors = sim$sppColorVect,
-                title = "Initial Types")
-        if (exists("devCur")) dev.set(devCur)
+      if (anyPlotting(P(sim)$.plots)) {
+        # browser()
+        plt <- plotVTM(speciesStack = mask(sim$speciesLayers, sim$studyAreaReporting),
+                       vegLeadingProportion = P(sim)$vegLeadingProportion,
+                       sppEquiv = sim$sppEquiv,
+                       sppEquivCol = P(sim)$sppEquivCol,
+                       colors = sim$sppColorVect,
+                       title = "Initial Types")
+        Plots(plt, filename = "Vegetation Type Map and Histogram")
       }
     },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
@@ -193,9 +186,9 @@ biomassDataInit <- function(sim) {
       speciesLayersNew <- fn(
         destinationPath = dPath, # this is generic files (preProcess)
         outputPath = outputPath(sim), # this will be the studyArea-specific files (postProcess)
-        studyArea = sim$studyArea_biomassParam,
+        to = sim$studyArea_biomassParam,
         studyAreaName = P(sim)$.studyAreaName,
-        rasterToMatch = sim$rasterToMatch_biomassParam,
+        projectTo = sim$rasterToMatch_biomassParam,
         sppEquiv = sim$sppEquiv,
         sppEquivCol = P(sim)$sppEquivCol,
         thresh = P(sim)$coverThresh,
