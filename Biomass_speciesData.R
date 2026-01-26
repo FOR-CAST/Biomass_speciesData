@@ -136,24 +136,37 @@ doEvent.Biomass_speciesData <- function(sim, eventTime, eventType) {
       ## TODO: use Plots() here to allow saving of the maps to png etc.
       if (anyPlotting(P(sim)$.plots)) {
         # browser()
-        plt <- plotVTM(speciesStack = mask(sim$speciesLayers, sim$studyAreaReporting),
-                       vegLeadingProportion = P(sim)$vegLeadingProportion,
-                       sppEquiv = sim$sppEquiv,
-                       sppEquivCol = P(sim)$sppEquivCol,
-                       colors = sim$sppColorVect,
-                       title = "Initial Types")
+        plt <- plotVTM(
+          speciesStack = mask(sim$speciesLayers, sim$studyAreaReporting),
+          vegLeadingProportion = P(sim)$vegLeadingProportion,
+          sppEquiv = sim$sppEquiv,
+          sppEquivCol = P(sim)$sppEquivCol,
+          colors = sim$sppColorVect,
+          title = "Initial Types"
+        )
         Plots(plt, filename = "Vegetation Type Map and Histogram")
       }
     },
-    warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
-                  "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
+    warning(paste(
+      "Undefined event type: '",
+      current(sim)[1, "eventType", with = FALSE],
+      "' in module '",
+      current(sim)[1, "moduleName", with = FALSE],
+      "'",
+      sep = ""
+    ))
   )
   return(invisible(sim))
 }
 
 ### template initialization
 biomassDataInit <- function(sim) {
-  cacheTags <- c(currentModule(sim), "otherFunctions:biomassDataInit", P(sim)$.studyAreaName, P(sim)$dataYear)
+  cacheTags <- c(
+    currentModule(sim),
+    "otherFunctions:biomassDataInit",
+    P(sim)$.studyAreaName,
+    P(sim)$dataYear
+  )
   dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": biomassInit() using dataPath '", dPath, "'.")
 
@@ -200,12 +213,12 @@ biomassDataInit <- function(sim) {
     })
 
     sim$speciesLayers <- if (length(sim$speciesLayers) > 0) {
-      Cache(overlayStacks,
-            highQualityStack = speciesLayersNew,
-            lowQualityStack = sim$speciesLayers,
-            destinationPath = outputPath(sim),
-            userTags = c(cacheTags, "overlayStacks"),
-            omitArgs = c("userTags"))
+      overlayStacks(
+        highQualityStack = speciesLayersNew,
+        lowQualityStack = sim$speciesLayers,
+        destinationPath = outputPath(sim)
+      ) |>
+        Cache(userTags = c(cacheTags, "overlayStacks"), omitArgs = c("userTags"))
     } else {
       speciesLayersNew
     }
@@ -216,9 +229,11 @@ biomassDataInit <- function(sim) {
 
   species <- names(sim$speciesLayers)
 
-  origFilenames <- vapply(names(sim$speciesLayers),
-                          function(r) Filenames(sim$speciesLayers[[r]], allowMultiple = FALSE),
-                          character(1))
+  origFilenames <- vapply(
+    names(sim$speciesLayers),
+    function(r) Filenames(sim$speciesLayers[[r]], allowMultiple = FALSE),
+    character(1)
+  )
 
   ## re-enforce study area mask (merged/summed layers are losing the mask)
   sim$speciesLayers <- maskTo(sim$speciesLayers, sim$rasterToMatch_biomassParam)
@@ -296,7 +311,7 @@ biomassDataInit <- function(sim) {
 
   ## Study area(s) ------------------------------------------------
   if (!suppliedElsewhere("studyArea", sim)) {
-    sim$studyArea <- LandR::randomStudyArea(seed = 1234, size = (rtm_res^2)*100)
+    sim$studyArea <- LandR::randomStudyArea(seed = 1234, size = (rtm_res^2) * 100)
   }
 
   if (!suppliedElsewhere("studyArea_biomassParam", sim)) {
