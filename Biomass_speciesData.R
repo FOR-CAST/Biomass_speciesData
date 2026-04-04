@@ -19,7 +19,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesData.Rmd"),
   loadOrder = list(before = c("Biomass_borealDataPrep", "Biomass_core")),
-  reqdPkgs = list("data.table", "pryr", "RCurl",
+  reqdPkgs = list("data.table", "RCurl",
                   "sf", "terra", "XML",
                   "reproducible (>= 2.1.0)",
                   "SpaDES.core (>= 2.1.4)", "SpaDES.tools (>= 1.0.2)",
@@ -176,7 +176,7 @@ biomassDataInit <- function(sim) {
 
   for (type in P(sim)$types) {
     fnName <- paste0("prepSpeciesLayers_", type)
-    whereIsFnName <- pryr::where(fnName)
+    whereIsFnName <- where(fnName)
 
     envirName <- attr(whereIsFnName, "name")
     if (is.null(envirName)) {
@@ -402,4 +402,15 @@ biomassDataInit <- function(sim) {
   sim$sppColorVect <- sppOuts$sppColorVect
 
   return(invisible(sim))
+}
+
+
+where <- function(name, env = parent.frame()) {
+  while (!identical(env, emptyenv())) {
+    if (exists(name, envir = env, inherits = FALSE)) {
+      return(env)
+    }
+    env <- parent.env(env)
+  }
+  stop(sprintf("Can't find '%s'", name), call. = FALSE)
 }
