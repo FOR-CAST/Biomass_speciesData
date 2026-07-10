@@ -75,7 +75,7 @@ defineModule(sim, list(
                           "If `NA`, a hash of `studyArea_biomassParam` will be used.")),
     defineParameter(".useCache", "character", "init", NA, NA,
                     desc = "Controls cache; caches the init event by default"),
-    defineParameter(".useParallel", "numeric", parallel::detectCores(), NA, NA,
+    defineParameter(".useParallel", "numeric", 2L, NA, NA,
                     desc = "Used in reading csv file with fread. Will be passed to `data.table::setDTthreads`.")
   ),
   inputObjects = bindrows(
