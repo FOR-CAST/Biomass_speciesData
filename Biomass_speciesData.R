@@ -202,9 +202,16 @@ biomassDataInit <- function(sim) {
         outputPath = outputPath(sim), # this will be the studyArea-specific files (postProcess)
         to = sim$studyArea_biomassParam,
         ## LandR >= 1.2.0.9017 (#227) takes `to`/`projectTo` as given, so without `cropTo` the crop
-        ## comes from the polygon and can drop an edge row/column of `rasterToMatch_biomassParam`;
-        ## the raster sets the grid, the polygon the mask (cf. Biomass_borealDataPrep #120)
+        ## comes from the polygon and can drop an edge row/column of `rasterToMatch_biomassParam`.
+        ## Mask with the raster too, as the layers are re-masked with below: masking with the
+        ## polygon (cf. Biomass_borealDataPrep #120) zeroes raster cells whose centres fall just
+        ## outside it (1,589 cells on LandWeb's WesternAlbertaUpland), while the raster mask keeps
+        ## every value LandR 1.2.0.9007 produced and also recovers 34,241 valid cells it left NA.
+        ## All four *To are explicit because LandR 1.2.0.9017's .legacyToTo() reads
+        ## `dots$studyArea`, which partially matches `studyAreaName` below and fills any NULL *To
+        ## with that string ("maskTo must be a Raster*, Spat*, sf or Spatial object").
         cropTo = sim$rasterToMatch_biomassParam,
+        maskTo = sim$rasterToMatch_biomassParam,
         studyAreaName = P(sim)$.studyAreaName,
         projectTo = sim$rasterToMatch_biomassParam,
         sppEquiv = sim$sppEquiv,
