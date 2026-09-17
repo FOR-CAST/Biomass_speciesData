@@ -23,7 +23,7 @@ defineModule(sim, list(
                   "sf", "terra", "XML",
                   "reproducible (>= 2.1.0)",
                   "SpaDES.core (>= 2.1.4)", "SpaDES.tools (>= 1.0.2)",
-                  "PredictiveEcology/LandR@development (>= 1.2.0.9015)",
+                  "PredictiveEcology/LandR@development (>= 1.2.0.9017)",
                   "PredictiveEcology/pemisc@development"),
   parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
@@ -201,6 +201,10 @@ biomassDataInit <- function(sim) {
         destinationPath = dPath, # this is generic files (preProcess)
         outputPath = outputPath(sim), # this will be the studyArea-specific files (postProcess)
         to = sim$studyArea_biomassParam,
+        ## LandR >= 1.2.0.9017 (#227) takes `to`/`projectTo` as given, so without `cropTo` the crop
+        ## comes from the polygon and can drop an edge row/column of `rasterToMatch_biomassParam`;
+        ## the raster sets the grid, the polygon the mask (cf. Biomass_borealDataPrep #120)
+        cropTo = sim$rasterToMatch_biomassParam,
         studyAreaName = P(sim)$.studyAreaName,
         projectTo = sim$rasterToMatch_biomassParam,
         sppEquiv = sim$sppEquiv,
