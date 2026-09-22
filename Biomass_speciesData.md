@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesData_ Manual"
-date: "Last updated: 2026-09-20"
+date: "Last updated: 2026-09-22"
 output:
   bookdown::html_document2:
     toc: true
@@ -38,9 +38,9 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](/home/runner/work/Biomass_speciesData/Biomass_speciesData/figures/moduleVersionBadge.png)](https://github.com/FOR-CAST/Biomass_speciesData9f38ce4d21d5153997a46f98aa99acb45cc10839)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData16172f7ca85b46817527a6c0934651a56b68503a)
 
-[![Issues-badge](/home/runner/work/Biomass_speciesData/Biomass_speciesData/figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData/issues)
+[![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData/issues)
 
 #### Authors:
 
