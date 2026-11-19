@@ -36,6 +36,12 @@ always_allow_html: true
 
 
 
+
+
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/FOR-CAST/Biomass_speciesData2610b29e9176a6d2f41a1be4837e707855ee6522)
+
+[![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData/issues)
+
 #### Authors:
 
 Ceres Barros <ceres.barros@ubc.ca> [aut, cre], Eliot J B McIntire <eliot.mcintire@nrcan-rncan.gc.ca> [aut], Alex M. Chubaty <achubaty@for-cast.ca> [aut]
