@@ -10,7 +10,4 @@ cache/
 *_cache/
 *_files/
 
-## these are downloaded automatically, no point in caching
-figures/*Badge.png
-
 Biomass_speciesData2.Rmd

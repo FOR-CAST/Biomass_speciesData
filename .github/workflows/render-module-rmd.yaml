@@ -47,3 +47,6 @@ jobs:
     uses: PredictiveEcology/actions/.github/workflows/render-module-rmd.yaml@main
     with:
       module: Biomass_speciesData
+      ## Commit the refreshed version badge with the .md, so the README shows the
+      ## current version.
+      extra-files: figures/moduleVersionBadge.png
