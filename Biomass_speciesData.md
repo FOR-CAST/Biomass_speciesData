@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesData_ Manual"
-date: "Last updated: 2026-11-24"
+date: "Last updated: 2026-11-25"
 output:
   bookdown::html_document2:
     toc: true
@@ -38,7 +38,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData86e2fe88861d142e51a62e1c6dedf48a9e8cbbf0)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/FOR-CAST/Biomass_speciesData/commit/ea0ba471879444b7c308d3d4877a37d499ba7662)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData/issues)
 
@@ -106,7 +106,7 @@ with each layer corresponding to a species.
 Currently, the module can access the following datasets:
 - Canadian National Forest Inventory (NFI) forest attributes kNN dataset [`KNN`; @BeaudoinEtAl2014, @BeaudoinEtAl2017];
 - Common Attribute Schema for Forest Resource Inventories [`CASFRI` (v4); @Cosco2011],
-- Spatialized Canadian National Forest Inventory [`SCANFI`; @Guindon2023, @Guindon2024];
+- Spatialized Canadian National Forest Inventory [`SCANFI`; @Guindon2023; @Guindon2024];
 - National Terrestrial Ecosystem Monitoring System for Canada Annual Tree Species [`NTEMS`; @Hermosilla2024];
 - Manitoba Forest Resource Inventory (`MBFRI`);
 - Ontario Forest Resource Inventory (`ONFRI`);
