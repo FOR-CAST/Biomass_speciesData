@@ -38,7 +38,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/FOR-CAST/Biomass_speciesData/commit/ea0ba471879444b7c308d3d4877a37d499ba7662)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/FOR-CAST/Biomass_speciesData/commit/fd4628f94c7c312f4b5c2af2515d26ca1ecb1764)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesData/issues)
 
